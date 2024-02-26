@@ -5,6 +5,9 @@ import (
 	"glgames/common/config"
 	"glgames/common/discovery"
 	"glgames/common/logs"
+	"glgames/core/repo"
+	"glgames/user/internal/service"
+	"glgames/user/pb"
 	"google.golang.org/grpc"
 	"net"
 	"os"
@@ -21,18 +24,19 @@ func Run(ctx context.Context) error {
 	register := discovery.NewRegister()
 	//启动grpc服务端
 	server := grpc.NewServer()
+	//初始化数据库管理
+	manager := repo.New()
 	go func() {
 		lis, err := net.Listen("tcp", config.Conf.Grpc.Addr)
 		if err != nil {
 			logs.Fatal("user grpc server listen err %v", err)
 		}
 		//注册gprc service到etcd 注册数据库mongo redis
-
+		pb.RegisterUserServiceServer(server, service.NewAccountService(manager))
 		err2 := register.Register(config.Conf.Etcd)
 		if err2 != nil {
 			logs.Fatal("user grpc server register err %v", err)
 		}
-		//初始化数据库管理
 
 		err = server.Serve(lis)
 		if err != nil {
@@ -43,6 +47,7 @@ func Run(ctx context.Context) error {
 	stop := func() {
 		server.Stop()
 		register.Close()
+		manager.Close()
 		time.Sleep(3 * time.Second)
 		logs.Info("stop app finish")
 	}
