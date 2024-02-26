@@ -1,0 +1,11 @@
+go 1.20
+
+use (
+ gate
+ common
+ connector
+ core
+ hail
+ user
+ framework
+)
